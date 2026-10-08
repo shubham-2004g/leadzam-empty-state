@@ -1,122 +1,147 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { AppShell } from './components/AppShell'
+import { AddLeadForm } from './components/AddLeadForm'
+import { Button } from './components/Button'
+import { Drawer } from './components/Drawer'
+import { EmptyState } from './components/EmptyState'
+import { ErrorState } from './components/ErrorState'
+import { LeadsTable } from './components/LeadsTable'
+import { LoadingState } from './components/LoadingState'
+import { SampleBanner } from './components/SampleBanner'
+import { StateSwitcher } from './components/StateSwitcher'
+import { Toasts } from './components/Toasts'
+import { UploadPanel } from './components/UploadPanel'
+import { useLeads } from './hooks/useLeads'
+import { useToasts } from './hooks/useToasts'
+import type { LeadDraft, LeadErrors } from './lib/validation'
+import type { ParsedRow } from './lib/csv'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+type Panel = 'none' | 'add' | 'upload'
+
+export default function App() {
+  const { status, leads, retry, showState, addLead, importLeads, loadSample, removeSample } = useLeads()
+  const { toasts, push, dismiss } = useToasts()
+  const [panel, setPanel] = useState<Panel>('none')
+  const [query, setQuery] = useState('')
+
+  const hasLeads = leads.length > 0
+  const hasSample = leads.some((lead) => lead.isSample)
+
+  const needle = query.trim().toLowerCase()
+  const visibleLeads = [...leads]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .filter((lead) => !needle || `${lead.name} ${lead.email} ${lead.phone}`.toLowerCase().includes(needle))
+
+  async function handleAddLead(draft: LeadDraft): Promise<LeadErrors | null> {
+    const errors = await addLead(draft)
+    if (!errors) {
+      setPanel('none')
+      push(`${draft.name.trim()} was added to your leads.`)
+    }
+    return errors
+  }
+
+  function handleImport(rows: ParsedRow[]) {
+    importLeads(rows)
+    push(`${rows.length} ${rows.length === 1 ? 'lead' : 'leads'} imported.`)
+  }
+
+  function handleLoadSample() {
+    loadSample()
+    push('8 sample leads added. Each one is labelled so you can tell them apart from real leads.', 'info')
+  }
+
+  function handleRemoveSample() {
+    removeSample()
+    push('Sample leads removed.', 'info')
+  }
+
+  function handleConnect() {
+    push('In the real product this opens Integrations. That screen is outside this prototype.', 'info')
+  }
+
+  function renderContent() {
+    if (status === 'loading') return <LoadingState />
+    if (status === 'error') return <ErrorState onRetry={retry} />
+    if (!hasLeads) {
+      return (
+        <EmptyState
+          onAddLead={() => setPanel('add')}
+          onUpload={() => setPanel('upload')}
+          onConnect={handleConnect}
+          onLoadSample={handleLoadSample}
+        />
+      )
+    }
+    return (
+      <>
+        {hasSample && <SampleBanner onRemove={handleRemoveSample} onAddLead={() => setPanel('add')} />}
+        <div className="toolbar">
+          <label className="search">
+            <span className="sr-only">Search leads by name, email or phone</span>
+            <input
+              type="search"
+              className="search__input"
+              placeholder="Search name, email or phone"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+        </div>
+        {visibleLeads.length > 0 ? (
+          <LeadsTable leads={visibleLeads} />
+        ) : (
+          <div className="no-matches" role="status">
+            <p>No leads match “{query}”.</p>
+            <Button onClick={() => setQuery('')}>Clear search</Button>
+          </div>
+        )}
+      </>
+    )
+  }
+
+  // Header buttons only appear once there are leads. On the empty page the three cards
+  // are the actions, so nothing competes with them.
+  const showHeaderActions = status === 'ready' && hasLeads
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <AppShell>
+      <div className="page-header">
+        <h1 className="page-header__title">
+          All Leads
+          {status === 'ready' && hasLeads && <span className="count" aria-label={`${leads.length} leads`}>{leads.length}</span>}
+        </h1>
+        {showHeaderActions && (
+          <div className="page-header__actions">
+            <Button onClick={() => setPanel('upload')}>Upload file</Button>
+            <Button variant="primary" onClick={() => setPanel('add')}>Add lead</Button>
+          </div>
+        )}
+      </div>
 
-      <div className="ticks"></div>
+      {renderContent()}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <Drawer
+        open={panel === 'add'}
+        title="Add a lead"
+        description="Add a lead directly to your CRM. No form submission needed."
+        onClose={() => setPanel('none')}
+      >
+        <AddLeadForm onSubmit={handleAddLead} onCancel={() => setPanel('none')} />
+      </Drawer>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <Drawer
+        open={panel === 'upload'}
+        title="Upload leads"
+        description="Import up to 2,000 leads at once from a CSV file."
+        onClose={() => setPanel('none')}
+      >
+        <UploadPanel onImport={handleImport} onClose={() => setPanel('none')} />
+      </Drawer>
+
+      <Toasts toasts={toasts} onDismiss={dismiss} />
+      <StateSwitcher onSelect={showState} />
+    </AppShell>
   )
 }
-
-export default App
