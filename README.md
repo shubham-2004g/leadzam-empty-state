@@ -4,7 +4,7 @@ A focused redesign of the **empty All Leads page** in Leadzam, built as a workin
 
 - Figma: https://www.figma.com/design/N7yNbV3KtAKY4L2fIaEXxL/LeadZam-%E2%80%93-Leads-Empty-State-Redesign?node-id=0-1&t=w55U8PzpJhPsgShe-1
 - UI/UX audit: https://drive.google.com/file/d/1Z6Db-3xSUk1ScPx3wa0N4v21SllmsZx-/view?usp=sharing
-- Walkthrough video: PASTE_VIDEO_LINK_HERE
+- Walkthrough video: https://drive.google.com/file/d/1Qzwqtm5aMilq9XvwZVSZYvKrdS34woIM/view?usp=sharing
 
 > This is an independent prototype made for an assessment. It uses mock data only, has no backend, and is not connected to the real Leadzam product.
 
